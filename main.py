@@ -209,58 +209,6 @@ def create_output_file(progress_bar, status_label):
     df.to_excel(output_path, index=False)
     messagebox.showinfo("Успех", f"Файл output.xlsx успешно создан: {output_path}")
 
-def process_files(progress_bar, status_label):
-    """Обрабатывает файлы и создает документы на основе шаблона."""
-    output_file = output_file_var.get()
-    template_file = template_file_var.get()
-    working_folder = working_folder_var.get()
-    replace_from = replace_from_var.get()
-    replace_to = replace_to_var.get()
-
-    if not output_file or not template_file or not working_folder:
-        messagebox.showerror("Ошибка", "Выберите рабочую папку, файл output.xlsx и шаблон.")
-        return
-
-    try:
-        df = pd.read_excel(output_file)
-        required_columns = ['Наименование', 'ИНН', 'Электронная почта']
-        if not all(column in df.columns for column in required_columns):
-            messagebox.showerror("Ошибка", f"В файле {output_file} отсутствуют необходимые колонки: {required_columns}")
-            return
-
-        output_folder = os.path.join(working_folder, "Итоговые_документы")
-        os.makedirs(output_folder, exist_ok=True)
-
-        total_rows = len(df)
-        for index, row in df.iterrows():
-            name = row['Наименование']
-            inn = row['ИНН']
-            email = row['Электронная почта']
-
-            doc = Document(template_file)
-            for para in doc.paragraphs:
-                if replace_from and replace_to:
-                    para.text = para.text.replace(replace_from, replace_to)
-                if name in para.text:
-                    para.text = para.text.replace(name, name)
-                if inn and f"ИНН: {inn}" in para.text:
-                    para.text = para.text.replace(f"ИНН: {inn}", f"ИНН: {inn}")
-                if email and f"E-mail: {email}" in para.text:
-                    para.text = para.text.replace(f"E-mail: {email}", f"E-mail: {email}")
-
-            file_name = re.sub(r'[\\/:*?"<>|]', '_', name)[:50]
-            file_path = os.path.join(output_folder, f"{file_name}.docx")
-            doc.save(file_path)
-
-            progress = (index + 1) / total_rows * 100
-            progress_bar['value'] = progress
-            status_label.config(text=f"Обработано {index + 1} из {total_rows} строк")
-            root.update_idletasks()
-
-        messagebox.showinfo("Успех", "Документы успешно созданы!")
-    except Exception as e:
-        messagebox.showerror("Ошибка", f"Произошла ошибка: {e}")
-
 def select_working_folder():
     """Выбор рабочей папки."""
     folder = filedialog.askdirectory()
@@ -271,13 +219,13 @@ def select_output_file():
     """Выбор файла output.xlsx."""
     file = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
     if file:
-        output_file_var.set(file)
+        output_file_var_fz.set(file)
 
 def select_template_file():
     """Выбор файла шаблона."""
     file = filedialog.askopenfilename(filetypes=[("Word files", "*.docx")])
     if file:
-        template_file_var.set(file)
+        template_file_var_fz.set(file)
 
 def is_word_installed():
     try:
@@ -286,7 +234,6 @@ def is_word_installed():
         return True
     except:
         return False
-
 
 def print_first_page_vbs(file_path, progress_callback=None):
     """Печатает первую страницу через VBS скрипт (отдельный процесс)"""
@@ -1290,10 +1237,6 @@ def save_settings():
         'working_folder': working_folder_var.get(),
         'compare_inn': compare_inn_var.get(),
         'compare_inn_value': compare_inn_value_var.get(),
-        'output_file': output_file_var.get(),
-        'template_file': template_file_var.get(),
-        'replace_from': replace_from_var.get(),
-        'replace_to': replace_to_var.get(),
         'output_file_fz': output_file_var_fz.get(),
         'template_file_fz': template_file_var_fz.get(),
         'save_folder_fz': save_folder_var_fz.get(),
@@ -1318,10 +1261,6 @@ def load_settings():
             working_folder_var.set(settings.get('working_folder', ''))
             compare_inn_var.set(settings.get('compare_inn', False))
             compare_inn_value_var.set(settings.get('compare_inn_value', ''))
-            output_file_var.set(settings.get('output_file', ''))
-            template_file_var.set(settings.get('template_file', ''))
-            replace_from_var.set(settings.get('replace_from', ''))
-            replace_to_var.set(settings.get('replace_to', ''))
             output_file_var_fz.set(settings.get('output_file_fz', ''))
             template_file_var_fz.set(settings.get('template_file_fz', ''))
             save_folder_var_fz.set(settings.get('save_folder_fz', ''))
@@ -1390,7 +1329,7 @@ def center_window(window, width, height):
 
 # Создаем графический интерфейс
 root = tk.Tk()
-root.title("Коммерческие предложения в один клик v1.1")
+root.title("Коммерческие предложения в один клик v1.2")
 root.geometry("900x700")
 
 # Центрируем главное окно
@@ -1408,13 +1347,9 @@ if not is_word_installed():
 # Переменные для хранения путей
 compare_inn_value_var = tk.StringVar()
 compare_inn_var = tk.BooleanVar()
-output_file_var = tk.StringVar()
 output_file_var_fz = tk.StringVar()
-replace_from_var = tk.StringVar()
-replace_to_var = tk.StringVar()
 save_folder_var_fz = tk.StringVar()
 search_query_var = tk.StringVar()
-template_file_var = tk.StringVar()
 template_file_var_fz = tk.StringVar()
 working_folder_var = tk.StringVar()
 print_folder_var = tk.StringVar()
@@ -1425,9 +1360,9 @@ search_type_var = tk.StringVar(value="name")
 notebook = ttk.Notebook(root)
 notebook.pack(fill='both', expand=True, padx=10, pady=10)
 
-# Вкладка для создания output.xlsx
+# Вкладка для создания output.xlsx (переименована)
 tab1 = ttk.Frame(notebook)
-notebook.add(tab1, text="Создать output.xlsx")
+notebook.add(tab1, text="Создать справочник реквизитов (output.xlsx)")
 
 # Центрируем содержимое вкладки 1
 tab1.grid_columnconfigure(0, weight=1)
@@ -1451,51 +1386,16 @@ status_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
 
 tk.Button(tab1, text="Создать output.xlsx", command=lambda: create_output_file(progress_bar, status_label)).grid(row=5, column=1, padx=5, pady=20)
 
-# Вкладка для создания документов
+# Вкладка "Формирование запросов" (теперь вторая вкладка)
 tab2 = ttk.Frame(notebook)
-notebook.add(tab2, text="Формирование шаблонов из таблицы")
+notebook.add(tab2, text="Формирование запросов")
 
 # Центрируем содержимое вкладки 2
-tab2.grid_columnconfigure(0, weight=1)
-tab2.grid_columnconfigure(1, weight=1)
-tab2.grid_columnconfigure(2, weight=1)
-
-tk.Label(tab2, text="Рабочая папка:").grid(row=0, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab2, textvariable=working_folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
-tk.Button(tab2, text="Выбрать", command=select_working_folder).grid(row=0, column=2, padx=5, pady=5, sticky='w')
-
-tk.Label(tab2, text="Файл output.xlsx:").grid(row=1, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab2, textvariable=output_file_var, width=50).grid(row=1, column=1, padx=5, pady=5)
-tk.Button(tab2, text="Выбрать", command=select_output_file).grid(row=1, column=2, padx=5, pady=5, sticky='w')
-
-tk.Label(tab2, text="Файл шаблона:").grid(row=2, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab2, textvariable=template_file_var, width=50).grid(row=2, column=1, padx=5, pady=5)
-tk.Button(tab2, text="Выбрать", command=select_template_file).grid(row=2, column=2, padx=5, pady=5, sticky='w')
-
-tk.Label(tab2, text="Текст для замены:").grid(row=3, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab2, textvariable=replace_from_var, width=50).grid(row=3, column=1, padx=5, pady=5)
-
-tk.Label(tab2, text="Новый текст:").grid(row=4, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab2, textvariable=replace_to_var, width=50).grid(row=4, column=1, padx=5, pady=5)
-
-progress_bar2 = ttk.Progressbar(tab2, orient="horizontal", length=400, mode="determinate")
-progress_bar2.grid(row=5, column=0, columnspan=3, padx=5, pady=5)
-
-status_label2 = tk.Label(tab2, text="Ожидание начала обработки")
-status_label2.grid(row=6, column=0, columnspan=3, padx=5, pady=5)
-
-tk.Button(tab2, text="Создать документы", command=lambda: process_files(progress_bar2, status_label2)).grid(row=7, column=1, padx=5, pady=20)
-
-# Вкладка "Формирование запросов"
-tab3 = ttk.Frame(notebook)
-notebook.add(tab3, text="Формирование запросов")
-
-# Центрируем содержимое вкладки 3
 for i in range(4):
-    tab3.grid_columnconfigure(i, weight=1)
+    tab2.grid_columnconfigure(i, weight=1)
 
 # Элементы управления
-controls_frame = tk.Frame(tab3)
+controls_frame = tk.Frame(tab2)
 controls_frame.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky='n')
 
 # Центрируем содержимое фрейма управления
@@ -1507,7 +1407,7 @@ tk.Entry(controls_frame, textvariable=template_file_var_fz, width=50).grid(row=0
 tk.Button(
     controls_frame, 
     text="Выбрать", 
-    command=lambda: template_file_var_fz.set(filedialog.askopenfilename(filetypes=[("Word files", "*.docx")]))
+    command=select_template_file
 ).grid(row=0, column=2, padx=5, pady=5, sticky='w')
 
 # Файл output.xlsx
@@ -1516,7 +1416,7 @@ tk.Entry(controls_frame, textvariable=output_file_var_fz, width=50).grid(row=1, 
 tk.Button(
     controls_frame, 
     text="Выбрать", 
-    command=lambda: output_file_var_fz.set(filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")]))
+    command=select_output_file
 ).grid(row=1, column=2, padx=5, pady=5, sticky='w')
 
 # Папка для сохранения
@@ -1533,7 +1433,7 @@ tk.Label(controls_frame, text="Начальный номер запроса:").g
 tk.Entry(controls_frame, textvariable=start_number_var, width=50).grid(row=3, column=1, padx=5, pady=5)
 
 # Поисковая строка
-search_frame = tk.Frame(tab3)
+search_frame = tk.Frame(tab2)
 search_frame.grid(row=4, column=0, columnspan=4, padx=5, pady=5, sticky='n')
 
 # Центрируем содержимое фрейма поиска
@@ -1545,7 +1445,7 @@ search_entry.grid(row=0, column=1, padx=5, pady=5)
 search_entry.focus_set()
 
 # Кнопки поиска
-search_buttons_frame = tk.Frame(tab3)
+search_buttons_frame = tk.Frame(tab2)
 search_buttons_frame.grid(row=5, column=0, columnspan=4, padx=5, pady=5)
 
 tk.Button(search_buttons_frame, text="Поиск по наименованию", 
@@ -1554,12 +1454,12 @@ tk.Button(search_buttons_frame, text="Показать все типы това�
           command=show_all_product_types).pack(side=tk.LEFT, padx=5)
 
 # Список результатов поиска с кнопкой очистки
-results_frame = tk.Frame(tab3)
+results_frame = tk.Frame(tab2)
 results_frame.grid(row=6, column=0, columnspan=4, padx=5, pady=5, sticky='nsew')
 
 # Настраиваем веса для растягивания
-tab3.grid_rowconfigure(6, weight=1)
-tab3.grid_rowconfigure(8, weight=1)
+tab2.grid_rowconfigure(6, weight=1)
+tab2.grid_rowconfigure(8, weight=1)
 
 search_results_listbox = Listbox(
     results_frame, 
@@ -1583,14 +1483,14 @@ clear_results_btn = tk.Button(
 clear_results_btn.pack(side=tk.RIGHT, padx=(5,0))
 
 # Кнопка добавления выбранного
-add_button_frame = tk.Frame(tab3)
+add_button_frame = tk.Frame(tab2)
 add_button_frame.grid(row=7, column=0, columnspan=4, padx=5, pady=5)
 
 tk.Button(add_button_frame, text="Добавить выбранное", 
           command=add_selected_row).pack()
 
 # Список отобранных организаций с кнопкой очистки
-selected_frame = tk.Frame(tab3)
+selected_frame = tk.Frame(tab2)
 selected_frame.grid(row=8, column=0, columnspan=4, padx=5, pady=5, sticky='nsew')
 
 selected_rows_listbox = Listbox(
@@ -1618,14 +1518,14 @@ clear_selected_btn = tk.Button(
 clear_selected_btn.pack(side=tk.RIGHT, padx=(5,0))
 
 # Кнопка удаления выбранного
-remove_button_frame = tk.Frame(tab3)
+remove_button_frame = tk.Frame(tab2)
 remove_button_frame.grid(row=9, column=0, columnspan=4, padx=5, pady=5)
 
 tk.Button(remove_button_frame, text="Удалить выбранное", 
           command=remove_selected_row).pack()
 
 # Кнопки формирования документов
-doc_buttons_frame = tk.Frame(tab3)
+doc_buttons_frame = tk.Frame(tab2)
 doc_buttons_frame.grid(row=10, column=0, columnspan=4, padx=5, pady=10)
 
 tk.Button(doc_buttons_frame, 
@@ -1641,29 +1541,29 @@ tk.Button(doc_buttons_frame,
 root.bind('<Return>', lambda e: search_by_name())
 
 # Вкладка "Печать"
-tab4 = ttk.Frame(notebook)
-notebook.add(tab4, text="Печать")
+tab3 = ttk.Frame(notebook)
+notebook.add(tab3, text="Печать")
 
-# Центрируем содержимое вкладки 4
-tab4.grid_columnconfigure(0, weight=1)
-tab4.grid_columnconfigure(1, weight=1)
-tab4.grid_columnconfigure(2, weight=1)
+# Центрируем содержимое вкладки 3
+tab3.grid_columnconfigure(0, weight=1)
+tab3.grid_columnconfigure(1, weight=1)
+tab3.grid_columnconfigure(2, weight=1)
 
-tk.Label(tab4, text="Папка с документами:").grid(row=0, column=0, padx=5, pady=5, sticky='e')
-tk.Entry(tab4, textvariable=print_folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
-tk.Button(tab4, text="Выбрать", command=lambda: print_folder_var.set(filedialog.askdirectory())).grid(row=0, column=2, padx=5, pady=5, sticky='w')
+tk.Label(tab3, text="Папка с документами:").grid(row=0, column=0, padx=5, pady=5, sticky='e')
+tk.Entry(tab3, textvariable=print_folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
+tk.Button(tab3, text="Выбрать", command=lambda: print_folder_var.set(filedialog.askdirectory())).grid(row=0, column=2, padx=5, pady=5, sticky='w')
 
 # Добавляем кнопки печати с подтверждением
-tk.Button(tab4, text="Печать первых страниц", 
+tk.Button(tab3, text="Печать первых страниц", 
           command=print_first_pages,
           bg="#e6f3ff").grid(row=1, column=1, padx=5, pady=10, sticky='ew')
 
-tk.Button(tab4, text="Печать всех документов", 
+tk.Button(tab3, text="Печать всех документов", 
           command=print_all_documents,
           bg="#e6f3ff").grid(row=2, column=1, padx=5, pady=10, sticky='ew')
 
 # Информационная метка
-info_label = tk.Label(tab4, text="Для печати используется принтер по умолчанию", 
+info_label = tk.Label(tab3, text="Для печати используется принтер по умолчанию", 
                      font=('Tahoma', 8), fg='gray')
 info_label.grid(row=3, column=1, padx=5, pady=5)
 
